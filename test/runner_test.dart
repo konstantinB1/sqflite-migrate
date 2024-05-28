@@ -1,8 +1,11 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
+import 'package:test/test.dart';
+
+const baseTestPath = 'test/test_files/migrations_test';
+
+String p(String pt) => join(baseTestPath, pt);
 
 void main() {
   late Database database;
@@ -10,8 +13,6 @@ void main() {
   late String path;
 
   setUpAll(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
@@ -26,44 +27,31 @@ void main() {
     deleteDatabase(path);
   }
 
-  Future<Runner> createRunner(
-      {bool useManifest = false, required String path}) async {
+  Future<Runner> createRunner({required String path}) async {
     return await Runner.init(
-        path: path, cachePath: join(path, "data.json"), connection: database);
+        path: p(path),
+        cachePath: join(path, "data.json"),
+        connection: database);
   }
 
   test("invalid file if does not include db ver as prefix", () async {
-    expect(
-        () async =>
-            await createRunner(useManifest: false, path: "assets/migrations"),
+    expect(() async => await createRunner(path: "migrations_invalid_file"),
         throwsA(isA<InvalidMigrationFile>()));
   });
 
   test("should migrate files", () async {
-    runner = await createRunner(path: "assets/migrations");
+    // ignore: avoid_single_cascade_in_expression_statements
+    await createRunner(path: "pass")
+      ..migrate();
 
-    await runner.migrate();
-
-    final res1 = await database
-        .rawQuery("SELECT COUNT(*) FROM pragma_table_info('transactions')");
-
-    expect(res1.first.values.first, 7);
+    expect(await getColumnCount(database, "test_table"), 2);
   });
 
   test("should rollback files", () async {
-    runner = await createRunner(
-        useManifest: false,
-        path: "test/migrations/test_files/migrations_test/pass");
+    await createRunner(path: "pass")
+      ..migrate()
+      ..rollback();
 
-    await runner.migrate();
-    await runner.rollback();
-
-    final res1 = await database
-        .rawQuery("SELECT COUNT(*) FROM pragma_table_info('test_table')");
-    final res2 = await database
-        .rawQuery("SELECT COUNT(*) FROM pragma_table_info('test_table2')");
-
-    expect(res1.first.values.first, 0);
-    expect(res2.first.values.first, 0);
+    expect(await getColumnCount(database, "test_table"), 0);
   });
 }

@@ -1,1 +1,11 @@
-{"files":[{"status":"UP","path":"assets/migrations/1_create_transactions_table.sql","runAt":"2024-05-28 06:56:32.478998","version":1,"content":"-- UP --\nCREATE TABLE IF NOT EXISTS transactions (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    date INTEGER NOT NULL,\n    sign TEXT NOT NULL,\n    amount REAL NOT NULL,\n    vendor_details TEXT NOT NULL,\n    transaction_type TEXT NOT NULL,\n    currency TEXT NOT NULL\n);\n\n-- DOWN --\nDROP TABLE transactions IF EXISTS;"}]}
+{
+	"files": [
+		{
+			"status": "UP",
+			"path": "assets/migrations/1_create_transactions_table.sql",
+			"runAt": "2024-05-28 06:56:32.478998",
+			"version": 1,
+			"content": "-- UP --\nCREATE TABLE IF NOT EXISTS transactions (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    date INTEGER NOT NULL,\n    sign TEXT NOT NULL,\n    amount REAL NOT NULL,\n    vendor_details TEXT NOT NULL,\n    transaction_type TEXT NOT NULL,\n    currency TEXT NOT NULL\n);\n\n-- DOWN --\nDROP TABLE transactions IF EXISTS;"
+		}
+	]
+}

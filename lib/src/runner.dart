@@ -3,12 +3,13 @@ import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_migrate/sqflite_migrate.dart';
 import 'package:sqflite_migrate/src/errors.dart';
+import 'package:sqflite_migrate/src/extension.dart';
 import 'package:sqflite_migrate/src/files_scanner.dart';
 import 'package:sqflite_migrate/src/migrate_json.dart';
 import 'package:sqflite_migrate/src/migration_file.dart';
 import 'package:sqflite_migrate/src/parse_sql_file.dart';
-import 'paths_io.dart' if (dart.library.ui) 'paths_flutter.dart';
 
 enum PrefixType { dateIso, version }
 
@@ -24,22 +25,26 @@ final class Runner extends RunnerInterface {
   final String cachePath;
   final Database db;
   final FileType fileType;
-  final FilesScanner _scanner = Paths();
+  final FilesScanner _scanner = defaultFileScannerFactory;
 
-  MigrateJson json = MigrateJson();
   late MigrateJson currentJson;
   List<String> _files = [];
 
   // Only support version for now
   final PrefixType prefix = PrefixType.version;
 
-  static Future<Runner> init(
-      {required path,
-      required String cachePath,
-      required connection,
-      FileType fileType = FileType.sql}) async {
+  static Future<Runner> init({
+    required path,
+    required String cachePath,
+    required connection,
+    FileType fileType = FileType.sql,
+  }) async {
     Runner instance = Runner._(
-        path: path, cachePath: cachePath, db: connection, fileType: fileType);
+      path: path,
+      cachePath: cachePath,
+      db: connection,
+      fileType: fileType,
+    );
 
     await instance._resolveFiles();
     await instance._parseExistingJson();
@@ -48,11 +53,12 @@ final class Runner extends RunnerInterface {
     return instance;
   }
 
-  Runner._(
-      {required this.path,
-      required this.cachePath,
-      required this.db,
-      required this.fileType});
+  Runner._({
+    required this.path,
+    required this.cachePath,
+    required this.db,
+    required this.fileType,
+  });
 
   get currentVersion {
     if (currentJson.isEmpty()) {
@@ -91,20 +97,20 @@ final class Runner extends RunnerInterface {
 
   Future<void> _createReportJson() async {
     File file = File(cachePath);
-    String content = jsonEncode(json.toMap());
+    String content = jsonEncode(currentJson.toMap());
 
     await file.writeAsString(content);
   }
 
   Future<void> _resolveFiles() async {
     List<String> assets = await _scanner.getPaths(path);
-    assets.removeWhere((element) => !element.endsWith(".sql"));
+    assets.removeWhere((element) => !element.endsWith(Extension.sql.value));
     assets.sort((a, b) => a.compareTo(b));
     _files = assets;
   }
 
   _getFiles() async {
-    MigrateJson next = json;
+    MigrateJson next = currentJson;
 
     for (String entity in _files) {
       String content = await _scanner.getFile(entity);
@@ -119,38 +125,38 @@ final class Runner extends RunnerInterface {
           throw InvalidMigrationFile(entity);
         }
 
-        if (json.hasVersion(n)) {
-          throw DuplicateVersionError(n);
-        }
+        // if (currentJson.hasVersion(n)) {
+        //   throw DuplicateVersionError(n);
+        // }
 
         MigrateJson.validateVersion(n);
 
-        bool hasLine = json.hasFile(content);
+        bool hasLine = currentJson.hasFile(entity);
 
         if (!hasLine) {
           MigrationFile file = MigrationFile(
             content: content,
             status: MigrationStatus.down,
             path: entity,
-            runAt: "never",
+            runAt: MigrationFile.noRun,
             version: n,
           );
 
-          json.addFile(file);
+          currentJson.addFile(file);
         }
       }
     }
 
-    json = MigrateJson.withFiles(next.files);
+    currentJson = MigrateJson.withFiles(next.files);
   }
 
   Future<void> _runAction(MigrationStatus type,
       {int until = -1, bool force = false}) async {
-    if (json.isEmpty()) {
+    if (currentJson.isEmpty()) {
       return;
     }
 
-    for (MigrationFile file in json.files) {
+    for (MigrationFile file in currentJson.files) {
       if (file.status.text == type.text && !force) {
         continue;
       }
@@ -161,8 +167,6 @@ final class Runner extends RunnerInterface {
 
       ParseSQLFile sqlFile =
           ParseSQLFile(content: file.content, type: type.toString());
-
-      print(sqlFile.statements);
 
       bool passed = true;
 
@@ -175,7 +179,7 @@ final class Runner extends RunnerInterface {
 
         try {
           await batch.commit();
-          file.status = MigrationStatus.up;
+          file.status = type;
           file.runAt = DateTime.now().toString();
         } catch (e) {
           throw Exception("Error running migration: ${e.toString()}");

@@ -37,6 +37,8 @@ class MigrationFile {
       required this.version,
       required this.content});
 
+  static String noRun = 'never';
+
   MigrationFile.fromJson(Map<String, dynamic> json)
       : status = MigrationStatus.fromString(json['status']),
         path = json['path'],
