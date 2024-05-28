@@ -79,7 +79,6 @@ class ParseSQLFile {
 
     _statements = statements;
 
-    print(_statements);
     _parseIfConditions(statementsLabel - 1);
   }
 

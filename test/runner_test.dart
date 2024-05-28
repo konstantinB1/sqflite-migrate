@@ -1,3 +1,7 @@
+// ignore_for_file: avoid_single_cascade_in_expression_statements
+
+import 'dart:io';
+
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
@@ -6,6 +10,15 @@ import 'package:test/test.dart';
 const baseTestPath = 'test/test_files/migrations_test';
 
 String p(String pt) => join(baseTestPath, pt);
+
+Future<void> deleteCacheFile(String path) async {
+  try {
+    File f = File(join(baseTestPath, path, "data.json"));
+    f.delete();
+  } catch (e) {
+    print("Error deleting file: $e");
+  }
+}
 
 void main() {
   late Database database;
@@ -39,7 +52,6 @@ void main() {
   });
 
   test("should migrate files", () async {
-    // ignore: avoid_single_cascade_in_expression_statements
     await createRunner(path: "pass")
       ..migrate();
 
@@ -47,8 +59,8 @@ void main() {
   });
 
   test("should rollback files", () async {
-    // ignore: avoid_single_cascade_in_expression_statements
     await createRunner(path: "pass")
+      ..migrate()
       ..rollback();
 
     expect(await getColumnCount(database, "test_table"), 0);

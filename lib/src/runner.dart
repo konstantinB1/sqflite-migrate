@@ -21,7 +21,7 @@ final class Runner extends BaseRunner {
   final FileType fileType;
   final FilesScanner _scanner = defaultFileScannerFactory;
 
-  late MigrateJson currentJson;
+  MigrateJson currentJson = MigrateJson();
   List<String> _files = [];
 
   // Only support version for now
@@ -151,10 +151,6 @@ final class Runner extends BaseRunner {
     }
 
     for (MigrationFile file in currentJson.files) {
-      if (file.status.text == type.text && !force) {
-        continue;
-      }
-
       if (until != -1 && file.version == until) {
         break;
       }
