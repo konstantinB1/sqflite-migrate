@@ -4,23 +4,17 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-import 'package:sqflite_migrate/src/errors.dart';
+import 'package:sqflite_migrate/src/base_runner.dart';
 import 'package:sqflite_migrate/src/extension.dart';
 import 'package:sqflite_migrate/src/files_scanner.dart';
 import 'package:sqflite_migrate/src/migrate_json.dart';
 import 'package:sqflite_migrate/src/migration_file.dart';
-import 'package:sqflite_migrate/src/parse_sql_file.dart';
 
 enum PrefixType { dateIso, version }
 
 enum ActionType { up, down }
 
-abstract class RunnerInterface {
-  Future<void> migrate({bool force = false, int until = -1});
-  Future<void> rollback({bool force = false, int until = -1});
-}
-
-final class Runner extends RunnerInterface {
+final class Runner extends BaseRunner {
   final String path;
   final String cachePath;
   final Database db;
@@ -46,8 +40,8 @@ final class Runner extends RunnerInterface {
       fileType: fileType,
     );
 
-    await instance._resolveFiles();
     await instance._parseExistingJson();
+    await instance._resolveFiles();
     await instance._getFiles();
 
     return instance;

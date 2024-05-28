@@ -9,7 +9,6 @@ String p(String pt) => join(baseTestPath, pt);
 
 void main() {
   late Database database;
-  late Runner runner;
   late String path;
 
   setUpAll(() async {
@@ -30,7 +29,7 @@ void main() {
   Future<Runner> createRunner({required String path}) async {
     return await Runner.init(
         path: p(path),
-        cachePath: join(path, "data.json"),
+        cachePath: join(baseTestPath, path, "data.json"),
         connection: database);
   }
 
@@ -48,8 +47,8 @@ void main() {
   });
 
   test("should rollback files", () async {
+    // ignore: avoid_single_cascade_in_expression_statements
     await createRunner(path: "pass")
-      ..migrate()
       ..rollback();
 
     expect(await getColumnCount(database, "test_table"), 0);
