@@ -12,8 +12,6 @@ import 'package:sqflite_migrate/src/migration_file.dart';
 
 enum PrefixType { dateIso, version }
 
-enum ActionType { up, down }
-
 final class Runner extends BaseRunner {
   final String path;
   final String cachePath;
@@ -155,25 +153,20 @@ final class Runner extends BaseRunner {
         break;
       }
 
-      ParseSQLFile sqlFile =
-          ParseSQLFile(content: file.content, type: type.toString());
+      ParseSQLFile sqlFile = ParseSQLFile(content: file.content, type: type);
 
-      bool passed = true;
+      Batch batch = db.batch();
 
-      if (passed) {
-        Batch batch = db.batch();
+      for (String query in sqlFile.statements) {
+        batch.execute(query);
+      }
 
-        for (String query in sqlFile.statements) {
-          batch.execute(query);
-        }
-
-        try {
-          await batch.commit();
-          file.status = type;
-          file.runAt = DateTime.now().toString();
-        } catch (e) {
-          throw Exception("Error running migration: ${e.toString()}");
-        }
+      try {
+        await batch.commit();
+        file.status = type;
+        file.runAt = DateTime.now().toString();
+      } catch (e) {
+        throw Exception("Error running migration: ${e.toString()}");
       }
     }
 

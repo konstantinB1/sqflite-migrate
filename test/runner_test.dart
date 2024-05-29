@@ -2,18 +2,17 @@
 
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-import 'package:test/test.dart';
 
-const baseTestPath = 'test/test_files/migrations_test';
-
-String p(String pt) => join(baseTestPath, pt);
+import 'utils.dart';
 
 Future<void> deleteCacheFile(String path) async {
   try {
-    File f = File(join(baseTestPath, path, "data.json"));
+    File f = File(p(part: path, file: "data.json"));
     f.delete();
   } catch (e) {
     print("Error deleting file: $e");
@@ -21,6 +20,8 @@ Future<void> deleteCacheFile(String path) async {
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   late Database database;
   late String path;
 
@@ -41,8 +42,8 @@ void main() {
 
   Future<Runner> createRunner({required String path}) async {
     return await Runner.init(
-        path: p(path),
-        cachePath: join(baseTestPath, path, "data.json"),
+        path: join("assets", "migrations_test", path),
+        cachePath: p(part: path, file: "data.json"),
         connection: database);
   }
 
@@ -60,7 +61,6 @@ void main() {
 
   test("should rollback files", () async {
     await createRunner(path: "pass")
-      ..migrate()
       ..rollback();
 
     expect(await getColumnCount(database, "test_table"), 0);

@@ -1,4 +1,5 @@
 import 'package:sqflite_migrate/src/errors.dart';
+import 'package:sqflite_migrate/src/migration_file.dart';
 import 'package:sqflite_migrate/src/utils.dart';
 
 String getBetween(String text, String start, String end) {
@@ -14,16 +15,18 @@ class ParseSQLFile {
   final List<String> _content;
   List<String>? _conditions;
   late final List<String> _statements;
-  final String _type;
+  final MigrationStatus _type;
 
-  ParseSQLFile({required String content, required String type})
+  ParseSQLFile({required String content, required MigrationStatus type})
       : _content = content.split("\n"),
         _type = type {
     _parseTypeStatements();
   }
 
   ParseSQLFile.offset(
-      {required String content, required String type, required int offset})
+      {required String content,
+      required MigrationStatus type,
+      required int offset})
       : _content = content.split("\n"),
         _type = type {
     {
@@ -32,6 +35,7 @@ class ParseSQLFile {
   }
 
   void _parseTypeStatements() {
+    print(_type);
     int statementsLabel =
         _content.indexWhere((element) => "-- $_type --" == element.trim());
 

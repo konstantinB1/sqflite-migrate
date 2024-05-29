@@ -13,13 +13,14 @@ dependencies:
   path: ^1.9.0
   sqflite: ^2.3.3+1
   sqflite_common_ffi: ^2.3.3
+  test: ^1.25.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  test: ^1.25.2
 
 flutter:
   assets:
-    - assets/migrations/__test__/
+    - assets/test_files/
+    - assets/migrations_test/

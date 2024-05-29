@@ -11,6 +11,11 @@ class Paths extends FilesScanner {
   Future<List<String>> getPaths(String basePath) async {
     AssetManifest manifest =
         await AssetManifest.loadFromAssetBundle(rootBundle);
-    return manifest.listAssets();
+    List<String> list = manifest.listAssets();
+
+    return list
+        .where((element) => element.startsWith(basePath))
+        .map((e) => e)
+        .toList();
   }
 }
