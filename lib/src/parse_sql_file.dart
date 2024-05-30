@@ -2,15 +2,12 @@ import 'package:sqflite_migrate/src/errors.dart';
 import 'package:sqflite_migrate/src/migration_file.dart';
 import 'package:sqflite_migrate/src/utils.dart';
 
-String getBetween(String text, String start, String end) {
-  int startIndex = text.indexOf(start);
-  int endIndex = text.indexOf(end, startIndex + start.length);
+final RegExp _commentNodeTemplate = RegExp(r"^--\s{1}(UP|DOWN|IF)\s{1}--$");
 
-  return text.substring(startIndex + start.length, endIndex);
-}
-
-final RegExp commentNodeTemplate = RegExp(r"^--\s{1}(UP|DOWN|IF)\s{1}--$");
-
+// A really straightforward sql file parser that splits few comment
+// based "pragmas", in addition to differentiating between UP/DOWN
+// based migrations, also supports [IF] statements for queries
+// that don't natively support IF EXISTS, to supress errors
 class ParseSQLFile {
   final List<String> _content;
   List<String>? _conditions;
@@ -67,7 +64,7 @@ class ParseSQLFile {
         break;
       }
 
-      if (commentNodeTemplate.hasMatch(cur)) {
+      if (_commentNodeTemplate.hasMatch(cur)) {
         buffer.clear();
         break;
       }
@@ -88,7 +85,7 @@ class ParseSQLFile {
 
   void _parseIfConditions(int startOffset) {
     List<String> nextConditions = untilReverse<String>(
-        _content, (element, i) => commentNodeTemplate.hasMatch(element.trim()),
+        _content, (element, i) => _commentNodeTemplate.hasMatch(element.trim()),
         startIndex: startOffset);
 
     if (nextConditions.isNotEmpty) {

@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:sqflite_migrate/src/files_scanner.dart';
 
+// A implementation of AssetManager based
+// file system retrieval (default behaviour)
 class Paths extends FilesScanner {
   @override
   Future<String> getFile(String path) {

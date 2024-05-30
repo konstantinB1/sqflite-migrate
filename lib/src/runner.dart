@@ -12,6 +12,19 @@ import 'package:sqflite_migrate/src/migration_file.dart';
 
 enum PrefixType { dateIso, version }
 
+/// Main runner implementation
+/// Needs to be run with [Runner.init] static method
+/// so we implictly take care of all the resource gathering
+/// in that phase, and then returning the instance, which
+/// is exposing the BaseRunner methods
+/// [connection] an [sqflite] instnace, created usually via
+/// [openConnection]
+/// [cachePath] argument will create a dedicated json file
+/// by default in the same directory if [path] is not provided
+/// It will skip all migrations where statuses match with the
+/// latest from the cache config file.
+/// Using [migrate]](force: true) (or [rollback]](force: true)), will override this behaviour
+/// and run the migrations anyway
 final class Runner extends BaseRunner {
   final String path;
   final String cachePath;
