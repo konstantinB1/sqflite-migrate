@@ -32,7 +32,6 @@ class ParseSQLFile {
   }
 
   void _parseTypeStatements() {
-    print(_type);
     int statementsLabel =
         _content.indexWhere((element) => "-- $_type --" == element.trim());
 

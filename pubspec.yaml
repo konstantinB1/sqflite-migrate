@@ -23,4 +23,3 @@ dev_dependencies:
 flutter:
   assets:
     - assets/test_files/
-    - assets/migrations_test/

@@ -16,7 +16,7 @@ Future<void> deleteCacheFile(String path) async {
     File f = File(p(part: path, file: "data.json"));
     f.delete();
   } catch (e) {
-    print("Error deleting file: $e");
+    throw Exception("Could not delete cache file - $e");
   }
 }
 
