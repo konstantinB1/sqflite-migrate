@@ -7,3 +7,9 @@ getColumnCount(Database db, String tableName) async {
 
   return res.first.values.first;
 }
+
+tableExists(Database db, String tableName) async {
+  final res = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='$tableName'");
+  return res.isNotEmpty;
+}

@@ -1,5 +1,5 @@
 import 'package:sqflite_migrate/src/errors.dart';
-import 'package:sqflite_migrate/src/migration_file.dart';
+import 'package:sqflite_migrate/src/migration_status.dart';
 import 'package:sqflite_migrate/src/utils.dart';
 
 final RegExp _commentNodeTemplate = RegExp(r"^--\s{1}(UP|DOWN|IF)\s{1}--$");

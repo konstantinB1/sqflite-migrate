@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-import 'package:sqflite_migrate/src/migration_file.dart';
+import 'package:sqflite_migrate/src/migration_status.dart';
 
 import 'utils.dart';
 

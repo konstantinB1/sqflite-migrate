@@ -14,3 +14,15 @@ List<T> untilReverse<T>(List<T> list, bool Function(T, int index) predicate,
 
   return result;
 }
+
+extension WhereOrNull<T> on List<T> {
+  T? whereOrNull(bool Function(T) predicate) {
+    for (T element in this) {
+      if (predicate(element)) {
+        return element;
+      }
+    }
+
+    return null;
+  }
+}
