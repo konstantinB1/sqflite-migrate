@@ -1,0 +1,11 @@
+{
+	"files": [
+		{
+			"status": "UP",
+			"path": "test/migrations/test_files/migrations_test/pass/1_create_tables.sql",
+			"runAt": "2024-05-26 17:35:33.303611",
+			"version": 1,
+			"content": "-- UP -- \nCREATE TABLE IF NOT EXISTS test_table (\n    id SERIAL PRIMARY KEY,\n    name TEXT NOT NULL\n);\n\nCREATE TABLE IF NOT EXISTS test_table2 (\n    id SERIAL PRIMARY KEY,\n    name TEXT NOT NULL\n);\n\n-- DOWN --\nDROP TABLE test_table;\nDROP TABLE test_table2;"
+		}
+	]
+}
