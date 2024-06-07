@@ -27,6 +27,7 @@ class TextReporter extends BaseReporter<TrackerModel> {
 
   @override
   void createReport(TrackerModel model) {
+    stdout.write(ansiEscapes.clearScreen);
     setHeader();
 
     String status = "";
@@ -153,13 +154,16 @@ class TextReporter extends BaseReporter<TrackerModel> {
   }
 
   @override
-  void finish(bool success) {
+  void finish(bool success, int scannedLen, int migratedLen) {
     _buffer.clear();
     stdout.write(ansiEscapes.cursorDown(2));
 
     if (success) {
       _pen.green(bold: true);
       stdout.write(_pen.write('🎉 Migration successful'));
+      stdout.write('\n');
+      stdout.write('Scanned: $scannedLen\n');
+      stdout.write('Migrated: $migratedLen\n');
     } else {
       _pen.red(bold: true);
       stdout.write(_pen.write('Migration failed'));

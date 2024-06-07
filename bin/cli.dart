@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ansi_escapes/ansi_escapes.dart';
+import 'package:ansicolor/ansicolor.dart';
 import 'package:args/command_runner.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
@@ -60,6 +60,13 @@ class ClearCommand extends Command {
 
     argParser.addOption('path',
         mandatory: true, abbr: 'p', help: 'Path to migrations folder');
+
+    argParser.addFlag('force',
+        abbr: 'f',
+        help: 'Force the deletion of the database and all migration records');
+
+    argParser.addFlag('until',
+        abbr: 'u', help: 'Delete all migrations until the provided version');
   }
 
   @override
@@ -70,9 +77,21 @@ class ClearCommand extends Command {
 
   @override
   void run() async {
-    String? dbPath = argResults?.option('database');
-    Runner runner = Runner(path: "", dbPath: dbPath!);
-    await runner.deleteDatabase();
+    AnsiPen pen = AnsiPen();
+
+    try {
+      String? dbPath = argResults?.option('database');
+      Runner runner = Runner(path: "", dbPath: dbPath!);
+      await runner.deleteDatabase();
+
+      pen.green(bold: true);
+      stdout.writeln(pen.write('Database deleted'));
+    } catch (e) {
+      pen.red(bold: true);
+      stdout.writeln(pen.write('Unable to delete database') + e.toString());
+    }
+
+    pen.reset();
   }
 }
 
@@ -108,7 +127,6 @@ class StatusCommand extends Command {
         ),
         dbPath: dbPath);
 
-    stdout.write(ansiEscapes.clearScreen);
     await runner.run();
     runner.writeReport();
   }
@@ -116,6 +134,13 @@ class StatusCommand extends Command {
 
 class UpCommand extends Command {
   UpCommand() {
+    argParser.addFlag('force',
+        abbr: 'f',
+        help: 'Force the deletion of the database and all migration records');
+
+    argParser.addOption('until',
+        abbr: 'u', help: 'Delete all migrations until the provided version');
+
     argParser.addOption('database',
         mandatory: true, abbr: 'd', help: 'Path to sqlite3 database file');
 
@@ -133,6 +158,8 @@ class UpCommand extends Command {
   void run() async {
     String? path = argResults?.option('path');
     String? dbPath = argResults?.option('database');
+    int? until = int.tryParse(argResults?.option('until') ?? '') ?? -1;
+    bool force = argResults?.flag('force') ?? false;
 
     if (path == null || dbPath == null) {
       stdout.writeln('No path provided');
@@ -146,11 +173,10 @@ class UpCommand extends Command {
         ),
         dbPath: dbPath);
 
-    stdout.write(ansiEscapes.clearScreen);
     await runner.run();
     runner.writeReport();
 
-    await runner.migrate();
+    await runner.migrate(force: force, until: until);
   }
 }
 
@@ -161,6 +187,13 @@ class DownCommand extends Command {
 
     argParser.addOption('path',
         mandatory: true, abbr: 'p', help: 'Path to migrations folder');
+
+    argParser.addFlag('force',
+        abbr: 'f',
+        help: 'Force the deletion of the database and all migration records');
+
+    argParser.addOption('until',
+        abbr: 'u', help: 'Delete all migrations until the provided version');
   }
 
   @override
@@ -173,6 +206,8 @@ class DownCommand extends Command {
   void run() async {
     String? path = argResults?.option('path');
     String? dbPath = argResults?.option('database');
+    int? until = int.tryParse(argResults?.option('until') ?? '') ?? -1;
+    bool force = argResults?.flag('force') ?? false;
 
     if (path == null || dbPath == null) {
       stdout.writeln('No path provided');
@@ -186,11 +221,10 @@ class DownCommand extends Command {
         ),
         dbPath: dbPath);
 
-    stdout.write(ansiEscapes.clearScreen);
     await runner.run();
     runner.writeReport();
 
-    await runner.rollback();
+    await runner.rollback(force: force, until: until);
   }
 }
 

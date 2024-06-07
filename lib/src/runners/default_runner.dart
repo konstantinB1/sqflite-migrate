@@ -148,6 +148,14 @@ final class Runner extends BaseRunner {
     }
   }
 
+  _shouldMigrate(int until, int version, bool matchStatus) {
+    if (until == -1) {
+      return !matchStatus;
+    }
+
+    return version < until && until != -1 && !matchStatus;
+  }
+
   Future<void> _runAction(MigrationStatus type,
       {int until = -1, bool force = false}) async {
     if (_scannedModels.isEmpty) {
@@ -157,6 +165,7 @@ final class Runner extends BaseRunner {
     List<TrackerModel> migrated = [];
     final List<TrackerModel>? migrations = await models;
     TrackerModel? maybeError;
+    List<Object?> res = [];
 
     try {
       Batch batch = _db!.batch();
@@ -169,7 +178,7 @@ final class Runner extends BaseRunner {
         late MigrationStatus status;
         bool skipped = false;
 
-        if (model.version < until && until == -1 || entry?.status != type) {
+        if (_shouldMigrate(until, model.version, entry?.status == type)) {
           ParseSQLFile sqlFile =
               ParseSQLFile(content: model.content, type: type);
 
@@ -179,9 +188,7 @@ final class Runner extends BaseRunner {
 
           status = type;
         } else {
-          if (entry?.status == type) {
-            skipped = true;
-          }
+          skipped = true;
 
           if (entry?.status != null) {
             status = entry!.status;
@@ -212,13 +219,13 @@ final class Runner extends BaseRunner {
         migrated.add(modelToUpdate);
       }
 
-      List<Object?> res = await batch.apply();
-      print(res);
-      _reporter.finish(true);
+      res = await batch.commit(continueOnError: false);
+
+      _reporter.finish(true, _scannedModels.length, res.length);
     } catch (e) {
-      _reporter.finish(false);
+      _reporter.finish(false, _scannedModels.length, res.length);
       throw Exception(
-          "Error occured at path: ${maybeError?.path} with message: $e");
+          "\nError occured at path: ${maybeError?.path} with message: \n$e");
     }
   }
 

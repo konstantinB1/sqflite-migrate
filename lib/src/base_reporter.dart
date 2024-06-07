@@ -19,5 +19,5 @@ abstract class BaseReporter<R> {
 
   void write();
 
-  void finish(bool success);
+  void finish(bool success, int scannedLen, int migratedLen);
 }
