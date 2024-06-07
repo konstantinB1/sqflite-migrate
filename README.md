@@ -1,2 +1,1 @@
-A sample command-line application with an entrypoint in `bin/`, library code
-in `lib/`, and example unit test in `test/`.
+Alpha release of sqflite migration tool meant to be cross platform, with user friendly cli utlity
