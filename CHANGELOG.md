@@ -1,3 +1,3 @@
-## 1.0.0
+## 0.1.0-alpha
 
-- Initial version.
+- Initial release of sqflite_migrate
