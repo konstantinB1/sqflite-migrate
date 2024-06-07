@@ -1,12 +1,11 @@
 name: sqflite_migrate
-description: A sample command-line application.
-version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+description: SQFLite migration tool
+version: 0.1.0-alpha
+repository: https://github.com/konstantinB1/sqflite-migrate
 
 environment:
   sdk: ^3.3.1
 
-# Add regular dependencies here.
 dependencies:
   ansicolor: ^2.0.2
   sqflite_common_ffi: ^2.3.3
