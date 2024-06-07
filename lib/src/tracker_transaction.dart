@@ -52,11 +52,10 @@ class TrackerModel {
 }
 
 class TrackerTable {
-  final Transaction _db;
-  Batch? batch;
+  final Database _db;
 
   TrackerTable(
-    Transaction db,
+    Database db,
   ) : _db = db;
 
   static Future<void> createTable(Database db) async {
@@ -82,6 +81,10 @@ class TrackerTable {
       'run_at': model.runAt,
       'content': model.content,
     });
+  }
+
+  Future<void> deleteAll() async {
+    await _db.delete(trackerTable);
   }
 
   Future<List<TrackerModel>> getAll() async {

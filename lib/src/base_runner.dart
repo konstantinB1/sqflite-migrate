@@ -8,4 +8,6 @@ abstract class BaseRunner {
 
   // By default rollback all if [until] is not provided
   Future<void> rollback({bool force = false, int until = -1});
+
+  String get status;
 }

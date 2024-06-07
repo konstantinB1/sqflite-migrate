@@ -39,8 +39,7 @@ void main() {
   Future<Runner> createRunner({required String path}) async {
     String base = join(Directory.current.path, "test", "migrations_test", path);
 
-    Runner runner = Runner(
-        path: base, cachePath: join(base, "data.json"), dbPath: await dbPath);
+    Runner runner = Runner(path: base, dbPath: await dbPath);
 
     await runner.run();
 
@@ -59,7 +58,7 @@ void main() {
       ..migrate();
 
     database.transaction((txn) async {
-      TrackerTable tracker = TrackerTable(txn);
+      TrackerTable tracker = TrackerTable(database);
       TrackerModel? model = await tracker.getByVersion(1);
       TrackerModel? model2 = await tracker.getByVersion(2);
 
@@ -77,7 +76,7 @@ void main() {
       ..rollback();
 
     database.transaction((txn) async {
-      TrackerTable tracker = TrackerTable(txn);
+      TrackerTable tracker = TrackerTable(database);
       TrackerModel? model = await tracker.getByVersion(1);
       TrackerModel? model2 = await tracker.getByVersion(2);
 

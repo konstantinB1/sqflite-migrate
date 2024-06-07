@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-import 'package:sqflite_migrate/src/base_reporter.dart';
 import 'package:sqflite_migrate/src/extension.dart';
 import 'package:sqflite_migrate/src/file_scanner/io_file_factory.dart';
 import 'package:sqflite_migrate/src/files_scanner.dart';
@@ -32,15 +33,30 @@ final class Runner extends BaseRunner {
   final FilesScanner _scanner = IOFactory();
   final String _dbPath;
 
+  TrackerTable? _tracker;
+
   // Internal instance of the database
   late Database? _db;
-  final BaseReporter _reporter;
+  final TextReporter _reporter = TextReporter(Measure());
 
   final List<TrackerModel> _scannedModels = [];
 
-  int _version = 1;
-
   List<String> _files = [];
+  final List<TrackerModel> _dbModels = [];
+
+  void writeReport() {
+    _reporter.write();
+  }
+
+  @override
+  String get status => _reporter.contents;
+  FutureOr<List<TrackerModel>>? get models async {
+    if (_dbModels.isEmpty) {
+      _dbModels.addAll(await _tracker!.getAll());
+    }
+
+    return _dbModels;
+  }
 
   // Only support version for now
   final PrefixType prefix = PrefixType.version;
@@ -55,21 +71,18 @@ final class Runner extends BaseRunner {
     _db = db;
 
     await TrackerTable.createTable(db);
+    _tracker = TrackerTable(db);
 
     await _resolveFiles();
     await _getFiles();
-
-    _reporter.status(_scannedModels);
   }
 
   Runner(
       {required this.path,
       this.fileType = FileType.sql,
       TrackerTable? tracker,
-      BaseReporter? reporter,
       required String dbPath})
-      : _dbPath = dbPath,
-        _reporter = reporter ?? TextReporter(Measure());
+      : _dbPath = dbPath;
 
   get db {
     if (_db == null) {
@@ -86,7 +99,17 @@ final class Runner extends BaseRunner {
     _files = assets;
   }
 
-  _getFiles() async {
+  Future<void> deleteDatabase() async {
+    await databaseFactoryFfi.deleteDatabase(path);
+  }
+
+  Future<void> deleteRecords() async {
+    await _tracker?.deleteAll();
+  }
+
+  Future<void> _getFiles() async {
+    final List<TrackerModel>? migrations = await models;
+
     for (String entity in _files) {
       String content = await _scanner.getFile(entity);
 
@@ -100,15 +123,27 @@ final class Runner extends BaseRunner {
           throw InvalidMigrationFile(entity);
         }
 
-        TrackerModel file = TrackerModel(
-          content: content,
-          status: MigrationStatus.down,
-          path: entity,
-          runAt: 'never',
-          version: n,
+        TrackerModel? modelByVersion = migrations?.singleWhere(
+          (element) => element.version == n,
+          orElse: () {
+            TrackerModel file = TrackerModel(
+              content: content,
+              status: MigrationStatus.down,
+              path: entity,
+              runAt: 'never',
+              version: n,
+            );
+
+            _tracker!.insert(file);
+
+            return file;
+          },
         );
 
-        _scannedModels.add(file);
+        if (modelByVersion != null) {
+          _scannedModels.add(modelByVersion);
+          _reporter.createReport(modelByVersion);
+        }
       }
     }
   }
@@ -119,66 +154,72 @@ final class Runner extends BaseRunner {
       return;
     }
 
-    _reporter.start(path, _version);
-
     List<TrackerModel> migrated = [];
+    final List<TrackerModel>? migrations = await models;
+    TrackerModel? maybeError;
 
-    _db!.transaction((txn) async {
-      TrackerTable tracker = TrackerTable(txn);
-      List<TrackerModel> migrations = await tracker.getAll();
-
-      Batch batch = txn.batch();
+    try {
+      Batch batch = _db!.batch();
 
       for (TrackerModel model in _scannedModels) {
-        TrackerModel? entry = migrations
+        maybeError = model;
+        TrackerModel? entry = migrations!
             .whereOrNull((element) => element.version == model.version);
 
         late MigrationStatus status;
+        bool skipped = false;
 
-        try {
-          if (model.version < until || until == -1) {
-            ParseSQLFile sqlFile =
-                ParseSQLFile(content: model.content, type: type);
+        if (model.version < until && until == -1 || entry?.status != type) {
+          ParseSQLFile sqlFile =
+              ParseSQLFile(content: model.content, type: type);
 
-            for (String query in sqlFile.statements) {
-              batch.execute(query);
-            }
-
-            status = type;
-          } else {
-            if (entry?.status != null) {
-              status = entry!.status;
-            } else {
-              status = type == MigrationStatus.up
-                  ? MigrationStatus.down
-                  : MigrationStatus.up;
-            }
+          for (String query in sqlFile.statements) {
+            batch.execute(query);
           }
 
-          TrackerModel modelToUpdate = TrackerModel.copyWith(
-              model: model,
-              status: status,
-              runAt: DateTime.now().toIso8601String());
-
-          if (entry == null) {
-            tracker.insert(modelToUpdate);
-          } else {
-            tracker.updateWhere(modelToUpdate);
+          status = type;
+        } else {
+          if (entry?.status == type) {
+            skipped = true;
           }
 
-          migrated.add(modelToUpdate);
-        } catch (e) {
-          _reporter.error(e.toString());
-          rethrow;
+          if (entry?.status != null) {
+            status = entry!.status;
+          } else {
+            status = type == MigrationStatus.up
+                ? MigrationStatus.down
+                : MigrationStatus.up;
+          }
         }
+
+        TrackerModel modelToUpdate = TrackerModel.copyWith(
+            model: model,
+            status: status,
+            version: entry?.version ?? model.version,
+            path: entry?.path ?? model.path,
+            runAt: DateTime.now().toIso8601String());
+
+        if (entry == null) {
+          await _tracker?.insert(modelToUpdate);
+        } else {
+          await _tracker?.updateWhere(modelToUpdate);
+        }
+
+        await Future.delayed(Duration(milliseconds: 200), () {
+          _reporter.updateReportLine(modelToUpdate, skipped);
+        });
+
+        migrated.add(modelToUpdate);
       }
 
-      await batch.commit(noResult: true);
-
-      ++_version;
-      _reporter.status(migrated);
-      _reporter.end();
-    });
+      List<Object?> res = await batch.apply();
+      print(res);
+      _reporter.finish(true);
+    } catch (e) {
+      _reporter.finish(false);
+      throw Exception(
+          "Error occured at path: ${maybeError?.path} with message: $e");
+    }
   }
 
   @override
