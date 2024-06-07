@@ -1,21 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:ansicolor/ansicolor.dart';
 import 'package:args/command_runner.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-
-Runner? runner;
-
-void createRunner(
-    {required String path, required Future<String> dbPath}) async {
-  String base = join(Directory.current.path, 'test', 'migrations_test', path);
-
-  if (runner != null) {
-    runner = Runner(path: base, dbPath: await dbPath);
-  }
-}
 
 class DeleteRecords extends Command {
   DeleteRecords() {

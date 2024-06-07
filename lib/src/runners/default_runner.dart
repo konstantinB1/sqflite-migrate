@@ -28,28 +28,51 @@ enum PrefixType { dateIso, version }
 /// Using [migrate]](force: true) (or [rollback]](force: true)), will override this behaviour
 /// and run the migrations anyway
 final class Runner extends BaseRunner {
+  /// A path provided by the user, where all the migrations
+  /// are stored
   final String path;
+
+  /// Type of the file, by default (and currently the only one)
+  /// is [FileType.sql]
   final FileType fileType;
+
+  /// Internal instance of the file scanner
   final FilesScanner _scanner = IOFactory();
+
+  /// Path to the database file to be used by
+  /// [Database] instance
   final String _dbPath;
 
+  /// Internal instance of the tracker table
+  /// to be used for all the database operations
+  /// like insert, update, delete, etc.
   TrackerTable? _tracker;
 
   // Internal instance of the database
   late Database? _db;
+
+  /// Internal text reported that directly writes
+  /// to stdout. It is built for the cli client,
+  /// but can be easily extended to other reporters
+  /// like json, html, etc.
   final TextReporter _reporter = TextReporter(Measure());
 
+  /// State of all the scanned models currrently
+  /// in the database
   final List<TrackerModel> _scannedModels = [];
 
+  /// Track of all the files in the directory provided
+  /// in the [path] argument
   List<String> _files = [];
+
   final List<TrackerModel> _dbModels = [];
 
   void writeReport() {
     _reporter.write();
   }
 
-  @override
   String get status => _reporter.contents;
+
   FutureOr<List<TrackerModel>>? get models async {
     if (_dbModels.isEmpty) {
       _dbModels.addAll(await _tracker!.getAll());
@@ -92,17 +115,24 @@ final class Runner extends BaseRunner {
     return _db;
   }
 
+  /// Resolve all the files in directory delegated by [path]
+  /// and io implemented in [FilesScanner] insstance
   Future<void> _resolveFiles() async {
     List<String> assets = await _scanner.getPaths(path);
     assets.removeWhere((element) => !element.endsWith(Extension.sql.value));
+
+    /// Sort the files by the version
     assets.sort((a, b) => a.compareTo(b));
     _files = assets;
   }
 
+  /// Wrapper around the [databaseFactoryFfi.deleteDatabase] method
+  /// to delete the database file
   Future<void> deleteDatabase() async {
     await databaseFactoryFfi.deleteDatabase(path);
   }
 
+  /// Wrapper around the [TrackerTable.deleteAll] method
   Future<void> deleteRecords() async {
     await _tracker?.deleteAll();
   }
@@ -156,6 +186,15 @@ final class Runner extends BaseRunner {
     return version < until && until != -1 && !matchStatus;
   }
 
+  /// Runs the migration action, either [MigrationStatus.up] or
+  /// [MigrationStatus.down] based on the [type] argument.
+  /// If [force] is set to true, it will try to run all the migrations
+  /// regardless of the status in the database
+  /// If [until] is set to a specific version, it will run all the migrations
+  /// up to that version, if the version is not found in the database
+  /// it will create an entry with the status of the migration
+  /// The method is atomic, and all the operations are wrapped in a
+  /// [Batch] instance
   Future<void> _runAction(MigrationStatus type,
       {int until = -1, bool force = false}) async {
     if (_scannedModels.isEmpty) {
@@ -229,11 +268,27 @@ final class Runner extends BaseRunner {
     }
   }
 
+  /// Runs all the migrations from the [path] directory, using internal
+  /// database table created by [_tracker] instance. All the operations
+  /// are ensured to be atomic.
+  /// If [force] is set to true, it will try to run all the migrations
+  /// regardless of the status in the database
+  /// If [until] is set to a specific version, it will run all the migrations
+  /// up to that version, if the version is not found in the database
+  /// it will create an entry with the status of the migration
   @override
   Future<void> migrate({bool force = false, int until = -1}) async {
     await _runAction(MigrationStatus.up, force: force, until: until);
   }
 
+  /// Rollbacks all the migrations from the [path] directory, using internal
+  /// database table created by [_tracker] instance. All the operations
+  /// are ensured to be atomic.
+  /// If [force] is set to true, it will try to run all the migrations
+  /// regardless of the status in the database
+  /// If [until] is set to a specific version, it will run all the migrations
+  /// up to that version, if the version is not found in the database
+  /// it will create an entry with the status of the migration
   @override
   Future<void> rollback({bool force = false, int until = -1}) async {
     await _runAction(MigrationStatus.down, force: force, until: until);
