@@ -201,8 +201,10 @@ final class Runner extends BaseRunner {
       return;
     }
 
-    List<TrackerModel> migrated = [];
     final List<TrackerModel>? migrations = await models;
+    final List<TrackerModel> updateTrackerTables = [];
+    final List<TrackerModel> insertToTrackerTables = [];
+
     TrackerModel? maybeError;
     List<Object?> res = [];
 
@@ -246,19 +248,27 @@ final class Runner extends BaseRunner {
             runAt: DateTime.now().toIso8601String());
 
         if (entry == null) {
-          await _tracker?.insert(modelToUpdate);
+          insertToTrackerTables.add(modelToUpdate);
         } else {
-          await _tracker?.updateWhere(modelToUpdate);
+          updateTrackerTables.add(modelToUpdate);
         }
 
         await Future.delayed(Duration(milliseconds: 200), () {
           _reporter.updateReportLine(modelToUpdate, skipped);
         });
-
-        migrated.add(modelToUpdate);
       }
 
       res = await batch.commit(continueOnError: false);
+
+      if (res.isNotEmpty) {
+        for (TrackerModel model in insertToTrackerTables) {
+          await _tracker!.insert(model);
+        }
+
+        for (TrackerModel model in updateTrackerTables) {
+          await _tracker!.updateWhere(model);
+        }
+      }
 
       _reporter.finish(true, _scannedModels.length, res.length);
     } catch (e) {

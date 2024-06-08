@@ -1,6 +1,7 @@
 enum MigrationStatus {
   down("down"),
-  up("up");
+  up("up"),
+  pending("pending");
 
   final String text;
 
@@ -12,6 +13,8 @@ enum MigrationStatus {
         return MigrationStatus.down;
       case "UP":
         return MigrationStatus.up;
+      case "PENDING":
+        return MigrationStatus.pending;
       default:
         throw Exception("Invalid migration status");
     }
