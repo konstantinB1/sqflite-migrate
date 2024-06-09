@@ -9,6 +9,8 @@ class DuplicateVersionError extends Error {
   }
 }
 
+/// Thrown if migration file is not in the
+/// right format ie <int>_<fileNameString>.sql
 class InvalidMigrationFile extends Error {
   final String path;
 

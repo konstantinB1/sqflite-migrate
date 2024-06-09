@@ -11,7 +11,7 @@ import 'package:sqflite_migrate/src/tracker_transaction.dart';
 import 'package:test/test.dart';
 
 // ignore: avoid_relative_lib_imports
-import '../lib/test/TextReporterStub.dart';
+import '../lib/test/text_reporter_stub.dart';
 import 'utils.dart';
 
 Future<void> deleteCacheFile(String path) async {

@@ -15,6 +15,8 @@ List<T> untilReverse<T>(List<T> list, bool Function(T, int index) predicate,
   return result;
 }
 
+/// Find an element in the list, or
+/// return null if it doesn't exist
 extension WhereOrNull<T> on List<T> {
   T? whereOrNull(bool Function(T) predicate) {
     for (T element in this) {

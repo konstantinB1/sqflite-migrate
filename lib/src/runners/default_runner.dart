@@ -16,20 +16,23 @@ import 'package:sqflite_migrate/src/utils.dart';
 enum PrefixType { dateIso, version }
 
 /// Main runner implementation
-/// Needs to be run with [Runner.init] static method
-/// so we implictly take care of all the resource gathering
-/// in that phase, and then returning the instance, which
-/// is exposing the [BaseRunner] methods
-/// Alternatively you can use the constructor directly
-/// and call [run] method manually when you need it
+/// Usually it should be run via the [MigrationRunner.init]
+/// method as it takes care of all the initialization
+/// aspects such as creating the database, tracker table,
+/// resolving all the files, etc.
+///
+/// If used with unnamed constructor, [MigrationRunner] it is
+/// necessary to call the [run] method to initialize the runner
+///
 ///
 /// [FileType.sql] is currently only supported type
 /// due to dart's limitations with reflection
 ///
 /// The runner is heavily used in the cli client so
 /// most of the api's are built around accomodating
-/// it. It is possible to use it programmatically, but
-/// its not recommended
+/// it. It is possible to use it programmatically, but due
+/// to currentl implementation of stdout beign coupled
+/// with the reporter, it may be unpredictable
 final class MigrationRunner extends BaseRunner {
   /// A path provided by the user, where all the migrations
   /// are stored
@@ -64,10 +67,8 @@ final class MigrationRunner extends BaseRunner {
   /// in the database
   final List<TrackerModel> _scannedModels = [];
 
-  /// Track of all the files in the directory provided
-  /// in the [path] argument
-  List<String> _files = [];
-
+  /// Internal storage for current state
+  /// of [TrackerTable.getAll] query
   final List<TrackerModel> _dbModels = [];
 
   /// Exposed [_reporter.write] method for
@@ -108,8 +109,7 @@ final class MigrationRunner extends BaseRunner {
     await TrackerTable.createTable(db);
     _tracker = TrackerTable(db);
 
-    await _resolveFiles();
-    await _getFiles();
+    await _resolve();
   }
 
   /// Static method to initialize the runner
@@ -136,6 +136,9 @@ final class MigrationRunner extends BaseRunner {
 
   get tracker => _tracker;
 
+  /// Initialize the runner
+  /// It is necessary to call [run] method to use
+  /// other relevant methods [migrate] or [rollback]
   MigrationRunner(
       {required this.path,
       this.fileType = FileType.sql,
@@ -153,17 +156,6 @@ final class MigrationRunner extends BaseRunner {
     return _db;
   }
 
-  /// Resolve all the files in directory delegated by [path]
-  /// and io implemented in [FilesScanner] insstance
-  Future<void> _resolveFiles() async {
-    List<String> assets = await _scanner.getPaths(path);
-    assets.removeWhere((element) => !element.endsWith(Extension.sql.value));
-
-    /// Sort the files by the version
-    assets.sort((a, b) => a.compareTo(b));
-    _files = assets;
-  }
-
   /// Wrapper around the [databaseFactoryFfi.deleteDatabase] method
   /// to delete the database file
   Future<void> deleteDatabase() async {
@@ -176,10 +168,24 @@ final class MigrationRunner extends BaseRunner {
     await _tracker?.deleteAll();
   }
 
-  Future<void> _getFiles() async {
+  /// Resolves files provided by the [path] parameter,
+  /// sorts it by version, and diffs the tracker table database
+  /// for insert/update
+  ///
+  /// Creates a report in [TextReporter] class about the current
+  /// state of the [TrackerTable]
+  Future<void> _resolve() async {
+    List<String> assets = await _scanner.getPaths(path);
+
+    assets.removeWhere((element) => !element.endsWith(Extension.sql.value));
+    assets.sort((a, b) => a.compareTo(b));
+
+    /// This is currenlty cached for the data to be fethed
+    /// only once. Probably should rewrite it to be a plain
+    /// inline method call so we don't run into desync
     final List<TrackerModel>? migrations = await models;
 
-    for (String entity in _files) {
+    for (String entity in assets) {
       String content = await _scanner.getFile(entity);
 
       String base = basename(entity);
@@ -217,6 +223,7 @@ final class MigrationRunner extends BaseRunner {
     }
   }
 
+  /// Helper method for easier testing
   _shouldMigrate(int until, int version, bool matchStatus) {
     if (until == -1) {
       return !matchStatus;

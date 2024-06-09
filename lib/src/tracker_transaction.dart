@@ -4,7 +4,11 @@ import 'package:sqflite_migrate/src/sql_utils.dart';
 
 const String trackerTable = 'migrate_tracker';
 
+/// TrackerModel to be synchronised
+/// with parsed files in IO and [trackerTable]
+/// instance
 class TrackerModel {
+  ///
   final int version;
   final MigrationStatus status;
   final String path;
@@ -51,13 +55,18 @@ class TrackerModel {
   }
 }
 
+/// Keep track of migrations that are currently
+/// used by the database, so we can achieve easier
+/// synchronization
 class TrackerTable {
+  /// [Sqflite] database instance
   final Database _db;
 
   TrackerTable(
     Database db,
   ) : _db = db;
 
+  /// Create a [trackerTable]
   static Future<void> createTable(Database db) async {
     if (!await tableExists(db, trackerTable)) {
       await db.execute('''

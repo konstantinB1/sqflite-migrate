@@ -1,3 +1,10 @@
+/// All the statuses that a migration can be in
+///
+/// Special [Pending] status should be used
+/// for atomic transactions using either [Batch]
+/// or [Transaction] API from sqflite package,
+/// so that before actually migrating we have
+/// a visual indicator that its not yet commited
 enum MigrationStatus {
   down("down"),
   up("up"),

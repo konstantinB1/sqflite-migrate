@@ -4,10 +4,14 @@ import 'package:sqflite_migrate/src/utils.dart';
 
 final RegExp _commentNodeTemplate = RegExp(r"^--\s{1}(UP|DOWN|IF)\s{1}--$");
 
-// A really straightforward sql file parser that splits few comment
-// based "pragmas", in addition to differentiating between UP/DOWN
-// based migrations, also supports [IF] statements for queries
-// that don't natively support IF EXISTS, to supress errors
+/// A really straightforward sql file parser that splits few comment
+/// based "pragmas", in addition to differentiating between UP/DOWN
+/// based migrations, also supports [IF] statements for queries
+/// that don't natively support IF EXISTS, to supress errors
+///
+/// Right now it would be an overkill to include something like
+/// proper sql parser, since we can easily achieve query parsing
+/// by delimiting with ";"
 class ParseSQLFile {
   final List<String> _content;
   List<String>? _conditions;

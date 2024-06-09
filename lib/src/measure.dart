@@ -1,3 +1,5 @@
+/// Simple measure class that tracks the timings
+/// of running migrations
 class Measure {
   int _end = 0;
   int _start = 0;
