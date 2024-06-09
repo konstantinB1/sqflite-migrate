@@ -1,3 +1,9 @@
+## 0.3.0
+
+- Refactor the cli
+- Write documentation for files
+- Write documentation in README.md
+
 ## 0.2.0-alpha
 
 - Added some inline code documentation
