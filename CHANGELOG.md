@@ -1,3 +1,8 @@
+# 0.3.1
+
+- Fix the binary not working
+- Fix readme_image.gif not being included in the pub package
+
 ## 0.3.0
 
 - Refactor the cli
