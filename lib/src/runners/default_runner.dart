@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
+import 'package:sqflite_migrate/src/base_reporter.dart';
 import 'package:sqflite_migrate/src/extension.dart';
 import 'package:sqflite_migrate/src/file_scanner/io_file_factory.dart';
 import 'package:sqflite_migrate/src/files_scanner.dart';
@@ -18,16 +19,18 @@ enum PrefixType { dateIso, version }
 /// Needs to be run with [Runner.init] static method
 /// so we implictly take care of all the resource gathering
 /// in that phase, and then returning the instance, which
-/// is exposing the BaseRunner methods
-/// [connection] an [sqflite] instnace, created usually via
-/// [openConnection]
-/// [cachePath] argument will create a dedicated json file
-/// by default in the same directory if [path] is not provided
-/// It will skip all migrations where statuses match with the
-/// latest from the cache config file.
-/// Using [migrate]](force: true) (or [rollback]](force: true)), will override this behaviour
-/// and run the migrations anyway
-final class Runner extends BaseRunner {
+/// is exposing the [BaseRunner] methods
+/// Alternatively you can use the constructor directly
+/// and call [run] method manually when you need it
+///
+/// [FileType.sql] is currently only supported type
+/// due to dart's limitations with reflection
+///
+/// The runner is heavily used in the cli client so
+/// most of the api's are built around accomodating
+/// it. It is possible to use it programmatically, but
+/// its not recommended
+final class MigrationRunner extends BaseRunner {
   /// A path provided by the user, where all the migrations
   /// are stored
   final String path;
@@ -55,7 +58,7 @@ final class Runner extends BaseRunner {
   /// to stdout. It is built for the cli client,
   /// but can be easily extended to other reporters
   /// like json, html, etc.
-  final TextReporter _reporter = TextReporter(Measure());
+  final BaseReporter _reporter;
 
   /// State of all the scanned models currrently
   /// in the database
@@ -67,12 +70,14 @@ final class Runner extends BaseRunner {
 
   final List<TrackerModel> _dbModels = [];
 
+  /// Exposed [_reporter.write] method for
+  /// printing the report to the stdout
   void writeReport() {
     _reporter.write();
   }
 
-  String get status => _reporter.contents;
-
+  /// Singleton getter to fetch all the models from
+  /// the [TrackerTable] table
   FutureOr<List<TrackerModel>>? get models async {
     if (_dbModels.isEmpty) {
       _dbModels.addAll(await _tracker!.getAll());
@@ -84,6 +89,13 @@ final class Runner extends BaseRunner {
   // Only support version for now
   final PrefixType prefix = PrefixType.version;
 
+  /// A necessary method for the runner that takes
+  /// care of
+  /// - initializing the ffi database
+  /// - creating the tracker table
+  /// - resolving all the files in the directory
+  /// - getting all the files
+  /// - creating the report
   Future<void> run() async {
     sqfliteFfiInit();
 
@@ -100,12 +112,38 @@ final class Runner extends BaseRunner {
     await _getFiles();
   }
 
-  Runner(
+  /// Static method to initialize the runner
+  /// and return the instance. Preferable over
+  /// the main constructor, since it already
+  /// calls the [run] method
+  static init(
+      {required String path,
+      FileType fileType = FileType.sql,
+      TrackerTable? tracker,
+      BaseReporter? reporter,
+      required String dbPath}) async {
+    MigrationRunner runner = MigrationRunner(
+        path: path,
+        fileType: fileType,
+        tracker: tracker,
+        dbPath: dbPath,
+        reporter: reporter);
+
+    await runner.run();
+
+    return runner;
+  }
+
+  get tracker => _tracker;
+
+  MigrationRunner(
       {required this.path,
       this.fileType = FileType.sql,
       TrackerTable? tracker,
+      BaseReporter? reporter,
       required String dbPath})
-      : _dbPath = dbPath;
+      : _dbPath = dbPath,
+        _reporter = reporter ?? TextReporter(Measure());
 
   get db {
     if (_db == null) {
@@ -133,6 +171,7 @@ final class Runner extends BaseRunner {
   }
 
   /// Wrapper around the [TrackerTable.deleteAll] method
+
   Future<void> deleteRecords() async {
     await _tracker?.deleteAll();
   }
@@ -253,9 +292,7 @@ final class Runner extends BaseRunner {
           updateTrackerTables.add(modelToUpdate);
         }
 
-        await Future.delayed(Duration(milliseconds: 200), () {
-          _reporter.updateReportLine(modelToUpdate, skipped);
-        });
+        _reporter.updateReportLine(modelToUpdate, skipped);
       }
 
       res = await batch.commit(continueOnError: false);

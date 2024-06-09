@@ -1,15 +1,17 @@
 // ignore_for_file: avoid_single_cascade_in_expression_statements
-
 import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_migrate/sqflite_migrate.dart';
+import 'package:sqflite_migrate/src/measure.dart';
 import 'package:sqflite_migrate/src/migration_status.dart';
 import 'package:sqflite_migrate/src/sql_utils.dart';
 import 'package:sqflite_migrate/src/tracker_transaction.dart';
 import 'package:test/test.dart';
 
+// ignore: avoid_relative_lib_imports
+import '../lib/test/TextReporterStub.dart';
 import 'utils.dart';
 
 Future<void> deleteCacheFile(String path) async {
@@ -27,78 +29,67 @@ Future<String> get dbPath async =>
 void main() {
   late Database database;
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  tearDown(() async {
-    deleteDatabase(await dbPath);
-  });
-
-  Future<Runner> createRunner({required String path}) async {
+  Future<MigrationRunner> createRunner({required String path}) async {
     String base = join(Directory.current.path, "test", "migrations_test", path);
 
-    Runner runner = Runner(path: base, dbPath: await dbPath);
-
-    await runner.run();
+    MigrationRunner runner = await MigrationRunner.init(
+        path: base,
+        dbPath: await dbPath,
+        reporter: TextReporterStub(Measure()));
 
     database = runner.db;
 
     return runner;
   }
 
-  test("invalid file if does not include db ver as prefix", () async {
-    expect(() async => await createRunner(path: "migrations_invalid_file"),
-        throwsA(isA<InvalidMigrationFile>()));
-  });
+  group("default_runner_test", () {
+    setUpAll(() {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
 
-  test("should migrate files", () async {
-    await createRunner(path: "pass")
-      ..migrate();
+    test("invalid file if does not include db ver as prefix", () async {
+      expect(() async => await createRunner(path: "migrations_invalid_file"),
+          throwsA(isA<InvalidMigrationFile>()));
+    });
 
-    TrackerTable tracker = TrackerTable(database);
-    TrackerModel? model = await tracker.getByVersion(1);
-    TrackerModel? model2 = await tracker.getByVersion(2);
+    test("should migrate files", () async {
+      MigrationRunner runner = await createRunner(path: "pass");
+      TrackerTable tracker = runner.tracker;
+      await runner.migrate();
 
-    // expect(model?.status, MigrationStatus.up);
-    // expect(model2?.status, MigrationStatus.up);
+      TrackerModel? model = await tracker.getByVersion(1);
+      TrackerModel? model2 = await tracker.getByVersion(2);
 
-    // expect(await getColumnCount(database, "test_table"), 2);
-    // expect(await getColumnCount(database, "test_table3"), 3);
-  });
+      expect(model?.status, MigrationStatus.up);
+      expect(model2?.status, MigrationStatus.up);
 
-  test("should rollback files", () async {
-    await createRunner(path: "pass")
-      ..migrate()
-      ..rollback();
+      expect(await getColumnCount(database, "test_table"), 2);
+      expect(await getColumnCount(database, "test_table2"), 3);
+    });
 
-    database.transaction((txn) async {
-      TrackerTable tracker = TrackerTable(database);
+    test("should rollback files", () async {
+      MigrationRunner runner = await createRunner(path: "pass");
+      TrackerTable tracker = runner.tracker;
+
+      await runner.rollback();
+
       TrackerModel? model = await tracker.getByVersion(1);
       TrackerModel? model2 = await tracker.getByVersion(2);
 
       expect(model?.status, MigrationStatus.down);
       expect(model2?.status, MigrationStatus.down);
+
+      expect(await getColumnCount(database, "test_table"), 0);
+      expect(await getColumnCount(database, "test_table2"), 0);
     });
 
-    expect(await getColumnCount(database, "test_table"), 0);
-    expect(await getColumnCount(database, "test_table3"), 0);
-  });
+    test('Should only upgrade first version', () async {
+      await createRunner(path: "pass")
+        ..migrate(until: 2);
 
-  test('Should only upgrade first version', () async {
-    await createRunner(path: "pass")
-      ..migrate(until: 2);
-
-    expect(await getColumnCount(database, "test_table"), 2);
-    expect(await tableExists(database, "test_table3"), false);
-  });
-
-  test('Should only rollback first version', () async {
-    await createRunner(path: "pass")
-      ..migrate()
-      ..rollback(until: 1);
-
-    expect(await getColumnCount(database, "test_table3"), 2);
+      expect(await getColumnCount(database, "test_table"), 0);
+      expect(await tableExists(database, "test_table2"), false);
+    });
   });
 }

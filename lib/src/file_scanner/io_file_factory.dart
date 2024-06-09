@@ -1,28 +1,18 @@
 import 'dart:io';
 
 import 'package:sqflite_migrate/sqflite_migrate.dart';
-import "package:path/path.dart";
 
-Future<List<String>> getTestDir(String path) async {
-  Directory dir = Directory(join("test", path));
-  final list = dir.list(recursive: false);
-  return list.map((element) => element.path).toList();
-}
-
-Future<String> getTestFile(String path) async {
-  File file = File(join("test", path));
-  return await file.readAsString();
-}
-
-// Dead simple abstraction over dart:io FS based methods
+/// Implementation for dart:io file operations
+/// Should be stubbed in test cases
 class IOFactory extends FilesScanner {
   @override
   Future<String> getFile(String path) async {
-    return await getTestFile(path);
+    return await File(path).readAsString();
   }
 
   @override
   Future<List<String>> getPaths(String basePath) async {
-    return await getTestDir(basePath);
+    Directory dir = Directory(basePath);
+    return dir.list(recursive: false).map((element) => element.path).toList();
   }
 }
