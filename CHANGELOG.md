@@ -1,3 +1,7 @@
+# 0.3.2
+
+- Fix gif path pointing to absolute github url
+
 # 0.3.1
 
 - Fix the binary not working

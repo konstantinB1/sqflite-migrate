@@ -1,6 +1,6 @@
 # sqflite_migrate
 
-![example](./docs/readme_example.gif)
+![example](https://github.com/konstantinB1/sqflite-migrate/blob/main/docs/readme_example.gif?raw=true)
 
 Proper, and traditional way to do migrations in [sqflite](https://pub.dev/packages/sqflite_common_ffi)
 
