@@ -1,3 +1,8 @@
+# 0.4.0
+
+- Add test badge
+- CI workflow
+
 # 0.3.2
 
 - Fix gif path pointing to absolute github url

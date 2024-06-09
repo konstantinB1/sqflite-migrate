@@ -1,6 +1,6 @@
 name: sqflite_migrate
 description: SQFLite migration tool
-version: 0.3.2
+version: 0.4.0
 repository: https://github.com/konstantinB1/sqflite-migrate
 
 environment:
