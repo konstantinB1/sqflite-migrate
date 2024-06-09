@@ -1,14 +1,16 @@
 # sqflite_migrate
 
+![](https://github.com/Your_Repository_Name/docs/readme_example.gif)
+
 Proper, and traditional way to do migrations in [sqflite](https://pub.dev/packages/sqflite_common_ffi)
 
 - Supports using plain `sql` syntax to create migration files
 - A working CLI with all the necessary commands
-- A programmatic for more fine grained control
+- A programmatic approach for more fine grained control (not recommended for production)
 
 # Usage
 
-`dart pub global activate sqflite_migrate`
+`dart pub global activate sqflitemigrate`
 
 This will give you access to global cli from [pub.dev](pub.dev) website
 
