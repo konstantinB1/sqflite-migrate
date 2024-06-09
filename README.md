@@ -1,5 +1,7 @@
 # sqflite_migrate
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/konstantinB1/sqflite-migrate/ci.yaml)
+
 ![example](https://github.com/konstantinB1/sqflite-migrate/blob/main/docs/readme_example.gif?raw=true)
 
 Proper, and traditional way to do migrations in [sqflite](https://pub.dev/packages/sqflite_common_ffi)
